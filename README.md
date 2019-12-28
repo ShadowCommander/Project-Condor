@@ -1,6 +1,6 @@
-# project-manager
+# Project Manager
 
-> A GitHub App built with [Probot](https://github.com/probot/probot) that Manages GitHub projects and issues using labels
+> A GitHub App built with [Probot](https://github.com/probot/probot) that creates and moves cards in a project around when labels are added to an issue or card.
 
 ## Setup
 
