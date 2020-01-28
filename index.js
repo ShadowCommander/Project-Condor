@@ -9,11 +9,23 @@ module.exports = app => {
 		if (!context.payload.repository.has_projects)
 			return
 
+		console.log("Test Start")
+		try {
 		// Get config
-		const config = getConfig(context)
+		const config = await getConfig(context)
+		console.log(config)
+		}
+		catch(err)
+		{
+		console.log(err)
+		}
+		console.log("Test End")
+		return
 
 		// Get project from config id
-		const project_id = await getRepos(context, config)
+		const project_id = await getProjectId(context, config)
+		console.log(project_id)
+		return
 		if (project_id == null)
 			return
 		const columns = await getColumns(context, project_id)
@@ -84,9 +96,6 @@ module.exports = app => {
 
 		return;
 	})
-	app.on('project_card.created', async context => {
-		context.log(`Card created: ${context.payload.project_card.note}`)
-	})
 
 	// For more information on building apps:
 	// https://probot.github.io/docs/
@@ -113,20 +122,37 @@ function getCard(cards, issue_url)
 	return null
 }
 
-async function getRepos(context, config)
+async function getProjectId(context, config)
 {
-	const { data } = await context.github.projects.listForRepo({ ...context.repo() })
-	var project_id = null
-	for (const proj of data)
+	var projects;
+	if (config.organization)
 	{
-		if (proj.number == config.project_number)
+		const { data } = await context.github.projects.listForOrg({
+			'org': config.organization
+		})
+		projects = data
+	}
+	else
+	{
+		const { data } = await context.github.projects.listForRepo({
+			...context.repo()
+		})
+		projects = data
+	}
+
+	var project_id = null
+	for (const project of projects)
+	{
+		console.log(project)
+		if (project.id == config.project_id)
 		{
-			project_id = proj.id
+			project_id = project.id
 			break
 		}
 	}
 	return project_id
 }
+
 async function getColumns(context, project_id)
 {
 	const { data } = await context.github.projects.listColumns({
@@ -146,8 +172,9 @@ function getColumn(columns, column_name)
 }
 
 async function getConfig(context) {
-	return context.config('project-label-bot-config.yml', {
-		project: context.project,
+	return await context.config('config.yml', {
+		organization: null,
+		project_id: null,
 		labels: {
 			'TODO': 'To Do',
 			'To Do': 'To Do',
