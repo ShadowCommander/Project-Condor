@@ -1,0 +1,10 @@
+Project-Manager:
+  org: null
+  repo: Project-Manager
+  project_id: null,
+  inbox: 'Inbox',
+  labels: {
+    'TODO': 'To Do',
+    'In progress': 'In Progress',
+    'Done': 'Done'
+  }
