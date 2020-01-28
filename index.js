@@ -5,82 +5,73 @@ const octokit = new Octokit()
  * @param {import('probot').Application} app
  */
 module.exports = app => {
-	const storedCards = [];
-
-	
-	octokit.repos.get({
-		owner: app.owner,
-		mediaType: {
-			previews: ["starfox-preview"]
-		}
-	})
-	console.log(app.Octokit.plugin)
-	//for (var p in app.Octokit)
-		//console.log(`"${p}": `, app.Octokit[p])
-	return;
 	app.on('issues.labeled', async context => {
-		const config = {
-			project_number: 1,
-			labels: [
-				{label: 'TODO', column: 'To Do'},
-				{label: 'In Progress', column: 'In Progress'},
-			]
-		}
-		context.log(context.payload)
-		return;
 		if (!context.payload.repository.has_projects)
 			return
-		
+
+		// Get config
+		const config = getConfig(context)
+
+		// Get project from config id
 		const project_id = await getRepos(context, config)
 		if (project_id == null)
 			return
 		const columns = await getColumns(context, project_id)
 
-		var column = null
-		for (const label of config.labels)
+		var column_name = null
+		column_name = config.labels[context.payload.label.name]
+		if (column_name == null)
+			return
+
+		const column = getColumn(columns, column_name)
+		if (column == null)
 		{
-			if (label.label == context.payload.label.name)
+			console.log(column_name, columns, column)
+			return
+		}
+
+		try
+		{
+			await context.github.projects.createCard({
+				column_id: column.id,
+				content_id: context.payload.issue.id,
+				content_type: 'Issue'
+			})
+			console.log(`Created card ${card.note} ${card.id} in ${column.name} ${column.id}`)
+		}
+		catch (err)
+		{
+			if (err.errors[0].message != 'Project already has the associated issue')
 			{
-				column = label.column
-				break
+				console.log(err);
+				return
 			}
 		}
-		if (column == null)
-			return;
 
-		for (const col of columns)
+		try
 		{
-			if (col.name == column)
+			for (const col of columns)
 			{
-				try
-				{
-					await context.github.projects.createCard({
-						column_id: col.id,
-						content_id: context.payload.issue.id,
-						content_type: 'Issue'
-					})
-				}
-				catch (err)
-				{
-					/*
-					if (err.errors[0].message == 'Project already has the associated issue')
-					{
-						const cards = getCards(context, col.id)
-						context.log(cards)
-						await context.github.projects.moveCard({
+				if (column.id == col.id)
+					continue
+				const cards = await getCards(context, col.id)
+				if (cards == null)
+					continue
+				const card = getCard(cards, context.payload.issue.url)
+				if (card == null)
+					continue
 
-						})
-					}
-					*/
-					/*
-					context.log(`ERORR ERROR ERROR`);
-					context.log(err)
-					for (const e in err)
-						context.log(`"${e}":`, err[e])
-						*/
-				}
-				break;
+				await context.github.projects.moveCard({
+					card_id: card.id,
+					position: 'top',
+					column_id: column.id
+				})
+				console.log(`Moved card ${card.note} ${card.id} from ${col.name} ${col.id} to ${column.name} ${column.id}`)
 			}
+		}
+		catch(err)
+		{
+			console.log(err)
 		}
 		/*
 		const CONFIG = getConfig(context)
@@ -89,26 +80,8 @@ module.exports = app => {
 		if (data.length != 1) {
 			return;
 		}
-
-		const project_id = data[0].id
-		context.log(`project_id ${project_id}`);
-		
-		for (var label of CONFIG.labels) {
-			if (PAYLOAD.label.name == label.label) {
-				try {
-					await GITHUB.projects.createCard({
-						column_id: label.list,
-						content_id: PAYLOAD.id,
-						content_type: 'Issue'
-					})
-					break;
-				} catch (err) {
-					context.log(err, err.request);
-				}
-			}
-		}
-		
 		*/
+
 		return;
 	})
 	app.on('project_card.created', async context => {
@@ -122,16 +95,22 @@ module.exports = app => {
 	// https://probot.github.io/docs/development/
 }
 
-async function forRepository() {
-
-}
-
 async function getCards(context, column_id)
 {
 	const { data } = await context.github.projects.listCards({
 		column_id: column_id
 	})
 	return data
+}
+
+function getCard(cards, issue_url)
+{
+	for (const card of cards)
+	{
+		if (card.content_url == issue_url)
+			return card
+	}
+	return null
 }
 
 async function getRepos(context, config)
@@ -155,62 +134,27 @@ async function getColumns(context, project_id)
 	})
 	return data
 }
-async function listForRepo()
+
+function getColumn(columns, column_name)
 {
-	var data = { data: [ { owner_url:
-       'https://api.github.com/repos/ShadowCommander/Project-Manager',
-      url: 'https://api.github.com/projects/3732336',
-      html_url:
-       'https://github.com/ShadowCommander/Project-Manager/projects/1',
-      columns_url: 'https://api.github.com/projects/3732336/columns',
-      id: 3732336,
-      node_id: 'MDc6UHJvamVjdDM3MzIzMzY=',
-      name: 'Test',
-      body: '',
-      number: 1,
-      state: 'open',
-      creator:
-       { login: 'ShadowCommander',
-         id: 10494922,
-         node_id: 'MDQ6VXNlcjEwNDk0OTIy',
-         avatar_url: 'https://avatars0.githubusercontent.com/u/10494922?v=4',
-         gravatar_id: '',
-         url: 'https://api.github.com/users/ShadowCommander',
-         html_url: 'https://github.com/ShadowCommander',
-         followers_url: 'https://api.github.com/users/ShadowCommander/followers',
-         following_url:
-          'https://api.github.com/users/ShadowCommander/following{/other_user}',
-         gists_url:
-          'https://api.github.com/users/ShadowCommander/gists{/gist_id}',
-         starred_url:
-          'https://api.github.com/users/ShadowCommander/starred{/owner}{/repo}',
-         subscriptions_url: 'https://api.github.com/users/ShadowCommander/subscriptions',
-         organizations_url: 'https://api.github.com/users/ShadowCommander/orgs',
-         repos_url: 'https://api.github.com/users/ShadowCommander/repos',
-         events_url:
-          'https://api.github.com/users/ShadowCommander/events{/privacy}',
-         received_events_url:
-          'https://api.github.com/users/ShadowCommander/received_events',
-         type: 'User',
-         site_admin: false },
-      created_at: '2019-12-28T23:47:21Z',
-      updated_at: '2019-12-29T01:08:09Z' } ] }
-	return data
+	for (const column of columns)
+	{
+		if (column.name == column_name)
+			return column;
+	}
+	return null
 }
 
 async function getConfig(context) {
-	return context.config('project-manager.yml', {
+	return context.config('project-label-bot-config.yml', {
 		project: context.project,
-		labels: [{label: 'Done', list:'Done'},
-		{label: 'In progress', list: 'In Progress'},
-		{label: 'TODO', list: 'TODO'},
-		{label: null, list: 'Inbox'}
-	]
+		labels: {
+			'TODO': 'To Do',
+			'To Do': 'To Do',
+			'In Progress': 'In Progress',
+			'good first issue': 'Good First Issue',
+			'Done': 'Done'
+		},
+		inbox: 'Inbox'
 	})
 }
-
-/*
-Planning
-
-Use projects.number to determine which project to add to
-*/
