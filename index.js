@@ -9,36 +9,31 @@ module.exports = app => {
 		if (!context.payload.repository.has_projects)
 			return
 
-		console.log("Test Start")
-		try {
-		// Get config
 		const config = await getConfig(context)
-		console.log(config)
+		if (!config) {
+			console.log('Config broken')
+			return
 		}
-		catch(err)
-		{
-		console.log(err)
-		}
-		console.log("Test End")
-		return
 
 		// Get project from config id
 		const project_id = await getProjectId(context, config)
-		console.log(project_id)
-		return
-		if (project_id == null)
+		if (project_id == null) {
+			console.log('No project_id')
 			return
+		}
 		const columns = await getColumns(context, project_id)
 
 		var column_name = null
 		column_name = config.labels[context.payload.label.name]
-		if (column_name == null)
+		if (column_name == null) {
+			console.log('No column_name', context.payload.label.name, config.labels)
 			return
+		}
 
 		const column = getColumn(columns, column_name)
 		if (column == null)
 		{
-			console.log(column_name, columns, column)
+			console.log('No column', column_name, columns, column)
 			return
 		}
 
@@ -48,17 +43,19 @@ module.exports = app => {
 				column_id: column.id,
 				content_id: context.payload.issue.id,
 				content_type: 'Issue'
+			}).then(() => {
+				console.log(`Created card ${card.note} ${card.id} in ${column.name} ${column.id}`)
 			})
-			console.log(`Created card ${card.note} ${card.id} in ${column.name} ${column.id}`)
 		}
-		catch (err)
+		catch(err)
 		{
 			if (err.errors[0].message != 'Project already has the associated issue')
 			{
 				console.log(err);
-				return
+				return null
 			}
 		}
+		console.log("Card exists")
 
 		try
 		{
@@ -78,22 +75,13 @@ module.exports = app => {
 					position: 'top',
 					column_id: column.id
 				})
-				console.log(`Moved card ${card.note} ${card.id} from ${col.name} ${col.id} to ${column.name} ${column.id}`)
+				console.log(`Moved card ${card.id} from '${col.name}' ${col.id} to '${column.name}' ${column.id}`)
 			}
 		}
 		catch(err)
 		{
 			console.log(err)
 		}
-		/*
-		const CONFIG = getConfig(context)
-		//context.log(`createCard: ${PAYLOAD.label.name} Issue`)
-		const { data } = await GITHUB.projects.listForRepo({ ...context.repo() })
-		if (data.length != 1) {
-			return;
-		}
-		*/
-
 		return;
 	})
 
@@ -125,26 +113,28 @@ function getCard(cards, issue_url)
 async function getProjectId(context, config)
 {
 	var projects;
-	if (config.organization)
+	if (config.org)
 	{
 		const { data } = await context.github.projects.listForOrg({
-			'org': config.organization
-		})
+			'org': config.org
+		}).catch(console.log)
 		projects = data
 	}
 	else
 	{
 		const { data } = await context.github.projects.listForRepo({
 			...context.repo()
-		})
+		}).catch(console.log)
 		projects = data
 	}
+
+	if (!config.project)
+		return projects[0].id
 
 	var project_id = null
 	for (const project of projects)
 	{
-		console.log(project)
-		if (project.id == config.project_id)
+		if (project.number == config.project)
 		{
 			project_id = project.id
 			break
@@ -172,16 +162,19 @@ function getColumn(columns, column_name)
 }
 
 async function getConfig(context) {
-	return await context.config('config.yml', {
-		organization: null,
-		project_id: null,
-		labels: {
-			'TODO': 'To Do',
-			'To Do': 'To Do',
-			'In Progress': 'In Progress',
-			'good first issue': 'Good First Issue',
-			'Done': 'Done'
-		},
-		inbox: 'Inbox'
+	const config = await context.config('config.yml', {
+		'Project-Manager': {
+			org: null,
+			project: null,
+			inbox: 'Inbox',
+			labels: {
+				'TODO': 'To Do',
+				'To Do': 'To Do',
+				'In Progress': 'In Progress',
+				'good first issue': 'Good First Issue',
+				'Done': 'Done'
+			}
+		}
 	})
+	return config['Project-Manager']
 }
