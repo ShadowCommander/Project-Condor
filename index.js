@@ -6,9 +6,6 @@ const octokit = new Octokit()
  */
 module.exports = app => {
 	app.on('issues.labeled', async context => {
-		if (!context.payload.repository.has_projects)
-			return
-
 		const config = await getConfig(context)
 		if (!config) {
 			console.log('Config broken')
@@ -43,7 +40,7 @@ module.exports = app => {
 				column_id: column.id,
 				content_id: context.payload.issue.id,
 				content_type: 'Issue'
-			}).then(() => {
+			}).then(card => {
 				console.log(`Created card ${card.note} ${card.id} in ${column.name} ${column.id}`)
 			})
 		}
