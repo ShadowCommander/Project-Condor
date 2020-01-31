@@ -6,53 +6,12 @@ const octokit = new Octokit()
  */
 module.exports = app => {
 	app.on('issues.labeled', async context => {
-		const config = await getConfig(context)
-		if (!config) {
-			console.log('Config broken')
+
+		const { column, columns } = await createCard(context, false)
+		if (!column) {
+			console.log('No column')
 			return
 		}
-
-		// Get project from config id
-		const project_id = await getProjectId(context, config)
-		if (project_id == null) {
-			console.log('No project_id')
-			return
-		}
-		const columns = await getColumns(context, project_id)
-
-		var column_name = null
-		column_name = config.labels[context.payload.label.name]
-		if (column_name == null) {
-			console.log('No column_name', context.payload.label.name, config.labels)
-			return
-		}
-
-		const column = getColumn(columns, column_name)
-		if (column == null)
-		{
-			console.log('No column', column_name, columns, column)
-			return
-		}
-
-		try
-		{
-			await context.github.projects.createCard({
-				column_id: column.id,
-				content_id: context.payload.issue.id,
-				content_type: 'Issue'
-			}).then(card => {
-				console.log(`Created card ${card.note} ${card.id} in ${column.name} ${column.id}`)
-			})
-		}
-		catch(err)
-		{
-			if (err.errors[0].message != 'Project already has the associated issue')
-			{
-				console.log(err);
-				return null
-			}
-		}
-		console.log("Card exists")
 
 		try
 		{
@@ -81,6 +40,14 @@ module.exports = app => {
 		}
 		return;
 	})
+	app.on('issues.opened', async context => {
+		console.log('Issue Created')
+		const column = await createCard(context, true)
+		if (!column) {
+			console.log('Create card failed')
+			return
+		}
+	})
 
 	// For more information on building apps:
 	// https://probot.github.io/docs/
@@ -88,6 +55,62 @@ module.exports = app => {
 	// To get your app running against GitHub, see:
 	// https://probot.github.io/docs/development/
 }
+
+async function createCard(context, toInbox)
+{
+	const config = await getConfig(context)
+	if (!config) {
+		console.log('Config broken')
+		return null
+	}
+
+	// Get project from config id
+	const project_id = await getProjectId(context, config)
+	if (project_id == null) {
+		console.log('No project_id')
+		return null
+	}
+	const columns = await getColumns(context, project_id)
+
+	var column_name = null
+	if (toInbox)
+		column_name = config.inbox
+	else
+		column_name = config.labels[context.payload.label.name]
+	if (column_name == null) {
+		console.log('No column_name', context.payload.label.name, config.labels)
+		return null
+	}
+
+	const column = getColumn(columns, column_name)
+	if (column == null)
+	{
+		console.log('No column', column_name, columns, column)
+		return null
+	}
+
+	try
+	{
+		await context.github.projects.createCard({
+			column_id: column.id,
+			content_id: context.payload.issue.id,
+			content_type: 'Issue'
+		}).then(({ data: card }) => {
+			console.log(`Created card ${card.id} in ${column.name} ${column.id}`)
+		})
+	}
+	catch(err)
+	{
+		if (err.errors[0].message != 'Project already has the associated issue')
+		{
+			console.log(err);
+			return null
+		}
+	}
+	console.log("Card exists")
+	return { column, columns }
+}
+
 
 async function getCards(context, column_id)
 {
