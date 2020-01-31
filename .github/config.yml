@@ -3,6 +3,6 @@ Project-Manager:
   project: null
   inbox: Inbox
   labels:
-    To Do: To Do
+    To do: To do
     In progress: In progress
     Done: Done
