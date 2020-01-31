@@ -6,8 +6,13 @@ const octokit = new Octokit()
  */
 module.exports = app => {
 	app.on('issues.labeled', async context => {
+		const config = await getConfig(context)
+		if (!config) {
+			console.log('Config broken')
+			return
+		}
 
-		const { column, columns } = await createCard(context, false)
+		const { column, columns } = await createCard(context, config, false)
 		if (!column) {
 			console.log('No column')
 			return
@@ -41,8 +46,17 @@ module.exports = app => {
 		return;
 	})
 	app.on('issues.opened', async context => {
-		console.log('Issue Created')
-		const column = await createCard(context, true)
+		const config = await getConfig(context)
+		if (!config) {
+			console.log('Config broken')
+			return
+		}
+
+		if (!config.inbox) {
+			return
+		}
+
+		const column = await createCard(context, config, true)
 		if (!column) {
 			console.log('Create card failed')
 			return
@@ -56,14 +70,8 @@ module.exports = app => {
 	// https://probot.github.io/docs/development/
 }
 
-async function createCard(context, toInbox)
+async function createCard(context, config, toInbox)
 {
-	const config = await getConfig(context)
-	if (!config) {
-		console.log('Config broken')
-		return null
-	}
-
 	// Get project from config id
 	const project_id = await getProjectId(context, config)
 	if (project_id == null) {
