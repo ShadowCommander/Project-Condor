@@ -19,7 +19,7 @@ Project-Manager:
 
 The `org` is either the name of the organization or `null`. If `org` is `null` the app searches the current repo for the project.
 
-The `project` is the project number in the url.
+The `project` is the project number in the url. If `project` is `null` the app chooses the first open project.
 
 The `inbox` is the name of the column that the app will put any new issues that are created. If `inbox` is `null` cards are not created for new issues.
 

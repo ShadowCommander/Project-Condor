@@ -7,12 +7,17 @@ const octokit = new Octokit()
 module.exports = app => {
 	app.on('issues.labeled', async context => {
 		const config = await getConfig(context)
-		if (!config) {
+		if (!config || !config.labels) {
 			console.log('Config broken')
 			return
 		}
 
-		const { column, columns } = await createCard(context, config, false)
+		const data = await createCard(context, config, false)
+		if (!data) {
+			console.log('Create card failed')
+			return
+		}
+		const { column, columns } = data
 		if (!column) {
 			console.log('No column')
 			return
@@ -72,6 +77,16 @@ module.exports = app => {
 
 async function createCard(context, config, toInbox)
 {
+	var column_name = null
+	if (toInbox)
+		column_name = config.inbox
+	else
+		column_name = config.labels[context.payload.label.name]
+	if (column_name == null) {
+		console.log(`No column_name ${context.payload.label.name} in config`)
+		return null
+	}
+
 	// Get project from config id
 	const project_id = await getProjectId(context, config)
 	if (project_id == null) {
@@ -79,16 +94,6 @@ async function createCard(context, config, toInbox)
 		return null
 	}
 	const columns = await getColumns(context, project_id)
-
-	var column_name = null
-	if (toInbox)
-		column_name = config.inbox
-	else
-		column_name = config.labels[context.payload.label.name]
-	if (column_name == null) {
-		console.log('No column_name', context.payload.label.name, config.labels)
-		return null
-	}
 
 	const column = getColumn(columns, column_name)
 	if (column == null)
@@ -156,8 +161,12 @@ async function getProjectId(context, config)
 		projects = data
 	}
 
-	if (!config.project)
-		return projects[0].id
+	if (!config.project) {
+		if (projects[0])
+			return projects[0].id
+		else
+			return null
+	}
 
 	var project_id = null
 	for (const project of projects)
@@ -190,19 +199,16 @@ function getColumn(columns, column_name)
 }
 
 async function getConfig(context) {
-	const config = await context.config('config.yml', {
+	const config = /*await context.config('config.yml',*/ {
 		'Project-Manager': {
-			org: null,
-			project: null,
 			inbox: 'Inbox',
 			labels: {
 				'TODO': 'To Do',
-				'To Do': 'To Do',
-				'In Progress': 'In Progress',
-				'good first issue': 'Good First Issue',
+				'To do': 'To Do',
+				'In progress': 'In progress',
 				'Done': 'Done'
 			}
 		}
-	})
+	}//)
 	return config['Project-Manager']
 }

@@ -1,7 +1,8 @@
 Project-Manager:
   org: null
-  project: 1
+  project: null
+  inbox: Inbox
   labels:
-    TODO: To Do
-    In progress: In Progress
+    To Do: To Do
+    In progress: In progress
     Done: Done
