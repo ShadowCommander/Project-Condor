@@ -200,7 +200,7 @@ function getColumn(columns, column_name)
 
 async function getConfig(context) {
 	const config = await context.config('config.yml', {
-		'Project-Manager': {
+		'Project-Condor': {
 			inbox: 'Inbox',
 			labels: {
 				'To Do': 'To Do',
@@ -209,5 +209,5 @@ async function getConfig(context) {
 			}
 		}
 	})
-	return config['Project-Manager']
+	return config['Project-Condor']
 }

@@ -1,14 +1,14 @@
-# Project Manager
+# Project Condor
 
 > A GitHub App built with [Probot](https://github.com/probot/probot)
 
-This GitHub App creates and moves cards in a project around when a label is added to an issue.
+Project Condor is a GitHub App that creates and moves project cards when a matching label is added to an issue.
 
 The labels and their corrisponding columns can be configured in a `.github/config.yml` file placed in a repo or in a `.github` project in an organization:
 
 ```yaml
-Project-Manager:
-  org: Project-Manager-Test
+Project-Condor:
+  org: Project-Condor-Test
   project: 1
   inbox: Inbox
   labels:
@@ -41,7 +41,7 @@ npm start
 
 ## Contributing
 
-If you have suggestions for how project-manager could be improved, or want to report a bug, open an issue! We'd love all and any contributions.
+If you have suggestions for how Project Condor could be improved, or want to report a bug, open an issue! We'd love all and any contributions.
 
 For more, check out the [Contributing Guide](CONTRIBUTING.md).
 
