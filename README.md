@@ -4,7 +4,7 @@
 
 This GitHub App creates and moves cards in a project around when a label is added to an issue.
 
-The labels and their corrisponding columns can be configured in a .github/config.yml file:
+The labels and their corrisponding columns can be configured in a `.github/config.yml` file placed in a repo or in a `.github` project in an organization:
 
 ```yaml
 Project-Manager:
@@ -27,7 +27,11 @@ The `inbox` is the name of the column that the app will put any new issues that 
 
 ## Setup
 
-```sh
+For repos, put the config file in the repo at `.github/config.yml`.
+
+For organizations, put the config file in `.github/config.yml` in a `.github` repo. (e.g. `organization/.github/.github/config.yml`)
+
+ ```sh
 # Install dependencies
 npm install
 
