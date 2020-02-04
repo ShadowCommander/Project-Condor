@@ -11,10 +11,8 @@ module.exports = app => {
     }
 
     const data = await createCard(context, config, false)
-    if (!data) {
-      console.log('Create card failed')
-      return
-    }
+    if (!data) { return }
+
     const { column, columns } = data
     if (!column) {
       console.log('No column')
@@ -101,9 +99,11 @@ async function createCard (context, config, toInbox) {
       console.log(err)
       return null
     }
+	console.log('Create card failed')
+	return { column, columns }
   }
-  console.log('Card exists')
-  return { column, columns }
+
+  return null
 }
 
 async function getCards (context, columnId) {
@@ -125,14 +125,22 @@ function getCard (cards, issueUrl) {
 async function getProjectId (context, config) {
   var projects = null
   if (config.org) {
-    const { data } = await context.github.projects.listForOrg({
+    const data = await context.github.projects.listForOrg({
       org: config.org
     }).catch(console.log)
-    projects = data
+	if (!data) {
+	  console.log('Fetch org projects failed')
+	  return;
+	}
+    projects = data.data
   } else {
-    const { data } = await context.github.projects.listForRepo({ ...context.repo() })
+    const data = await context.github.projects.listForRepo({ ...context.repo() })
       .catch(console.log)
-    projects = data
+	if (!data) {
+	  console.log('Fetch repo projects failed')
+	  return;
+	}
+    projects = data.data
   }
 
   if (!projects) { return }
